@@ -14,9 +14,8 @@ class TemperatureRecorder:
 		self.thread_stop_event.set()
 		
 	def record(self, stop_event):
-		conn = sqlite3.connect("/opt/temprec/temperatures.db")
-		conn.execute("CREATE TABLE IF NOT EXISTS temperatures(timestamp DATETIME DEFAULT CURRENT_TIMESTAMP PRIMARY KEY ASC, temperature INTEGER)")
-	
+		conn = sqlite3.connect("/opt/hotpi/temperatures.db")
+		
 		while (not stop_event.is_set()):
 			self.last_temp = self.get_curr_temp()
 			conn.execute("INSERT INTO temperatures(temperature) VALUES(" + str(self.last_temp) + ")")
