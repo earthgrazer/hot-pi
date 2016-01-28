@@ -1,0 +1,130 @@
+<html>
+	<head>
+		<title>Raspberry Pi System Temperature</title>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.13/d3.min.js"></script>
+		<style>
+			body {
+				font: 10px sans-serif;
+			}
+			
+			.line {
+				fill: none;
+				stroke: steelblue;
+				stroke-width: 1.5px;
+			}
+			
+			.x.axis path {
+				display: none;
+			}
+			
+			.axis path,
+			.axis line {
+				fill: none;
+				stroke: #000;
+				shape-rendering: crispEdges;
+			}
+			
+			#setupDesc p {
+				font-size: 14px;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="dailyCpu">
+			<h2>Daily CPU Temperature</h2>
+		</div>
+		<div id="weeklyCpu">
+			<h2>Weekly CPU Temperature</h2>
+		</div>
+		<div id="monthlyCpu">
+			<h2>Monthly CPU Temperature</h2>
+		</div>
+		<div id="yearlyCpu">
+			<h2>Yearly CPU Temperature</h2>
+		</div>
+		<div id="setupDesc">
+			<p>served by nginx + flask (cpython 2.7) + sqlite on raspbian (raspberry pi 2)</p>
+		</div>
+		<script>
+			var margin = {top: 20, right: 20, bottom: 50, left: 50};
+			var width = 960 - margin.left - margin.right;
+			var height = 520 - margin.top - margin.bottom;
+			var x = d3.time.scale().range([0, width]);
+			var y = d3.scale.linear().range([height, 0]);
+			
+			var dailyXAxis = d3.svg.axis().scale(x).orient("bottom");
+			var dailyYAxis = d3.svg.axis().scale(y).orient("left");
+			var dailyLine = d3.svg.line().defined(function(d){return d.t != null;})
+						.x(function(d) {return x(d.d);})
+						.y(function(d) {return y(d.t);});
+			var daily = d3.select("#dailyCpu");
+			
+			var weeklyXAxis = d3.svg.axis().scale(x).orient("bottom");
+			var weeklyYAxis = d3.svg.axis().scale(y).orient("left");
+			var weeklyLine = d3.svg.line().defined(function(d){return d.t != null;})
+						.x(function(d) {return x(d.d);})
+						.y(function(d) {return y(d.t);});
+			var weekly = d3.select("#weeklyCpu");
+			
+			var monthlyXAxis = d3.svg.axis().scale(x).orient("bottom");
+			var monthlyYAxis = d3.svg.axis().scale(y).orient("left");
+			var monthlyLine = d3.svg.line().defined(function(d){return d.t != null;})
+						.x(function(d) {return x(d.d);})
+						.y(function(d) {return y(d.t);});
+			var monthly = d3.select("#monthlyCpu");
+			
+			var yearlyXAxis = d3.svg.axis().scale(x).orient("bottom");
+			var yearlyYAxis = d3.svg.axis().scale(y).orient("left");
+			var yearlyLine = d3.svg.line().defined(function(d){return d.t != null;})
+						.x(function(d) {return x(d.d);})
+						.y(function(d) {return y(d.t);});
+			var yearly = d3.select("#yearlyCpu");
+			
+			var setupGraph = function(root, line, xAxis, yAxis, uri) {
+				d3.json(uri, function(error, json) {
+					if (error) throw error;
+					
+					json.temperatures.forEach(function(d) {
+						if (d.t != null)
+							d.t = (d.t / 1000).toFixed(1);
+						d.d *= 1000;
+					});
+					
+					x.domain(d3.extent(json.temperatures, function(d) {return d.d;}));
+					y.domain(d3.extent(json.temperatures, function(d) {return d.t;}));
+					
+					var svg = root.append("svg").attr("width", width + margin.left + margin.right).attr("height", height + margin.top + margin.bottom).append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+					svg.append("g")
+					   .attr("class", "x axis")
+					   .attr("transform", "translate(0," + height + ")")
+					   .call(xAxis)
+					   .append("text")
+					   .attr("y", 40)
+					   .text("| Query execution time: " + json.stats.executionElapsedTime + " seconds | Records retrieved: " + json.stats.recordsRetrieved + " |");
+					   
+					svg.append("g")
+					   .attr("class", "y axis")
+					   .call(yAxis)
+					   .append("text")
+					   .attr("transform", "rotate(-90)")
+					   .attr("y", 6)
+					   .attr("dy", ".71em")
+					   .style("text-anchor", "end")
+					   .text("Temperature (Celcius)");
+					   
+					svg.append("path")
+					   .datum(json.temperatures)
+					   .attr("class", "line")
+					   .attr("d", line)
+				});
+			};
+			
+			setupGraph(daily, dailyLine, dailyXAxis, dailyYAxis, "api/temperatures?minus=86400&interval=180");
+			setupGraph(weekly, weeklyLine, weeklyXAxis, weeklyYAxis, "api/temperatures?minus=604800&interval=1260");
+			setupGraph(monthly, monthlyLine, monthlyXAxis, monthlyYAxis, "api/temperatures?minus=2592000&interval=5400");
+			setupGraph(yearly, yearlyLine, yearlyXAxis, yearlyYAxis, "api/temperatures?minus=31536000&interval=65700");
+		</script>
+	</body>
+</html>
